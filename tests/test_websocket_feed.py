@@ -5,7 +5,15 @@ import datetime
 import logging
 import time
 import yaml
+import json
 import pandas as pd
+
+
+df = pd.read_csv("NFO_symbols.txt", sep = ',')
+val = df [df.TradingSymbol.str.match('^BANKNIFTY28APR22')]
+tokens =[]
+for index, row in val.iterrows():
+    tokens.append('NFO|'+ str(row['Token']))
 
 #sample
 logging.basicConfig(level=logging.DEBUG)
@@ -42,15 +50,15 @@ def event_handler_quote_update(message):
         SYMBOLDICT[key] = symbol_info
     else:
         SYMBOLDICT[key] = message
-
-    print(SYMBOLDICT[key])
+    with open('file.json', 'a') as outfile:
+        outfile.write(json.dumps(SYMBOLDICT[key]))
+        outfile.write("\n")
 
 def open_callback():
     global socket_opened
     socket_opened = True
     print('app is connected')
-    
-    api.subscribe('NSE|11630', feed_type='d')
+    api.subscribe(tokens)
     #api.subscribe(['NSE|22', 'BSE|522032'])
 
 #end of callbacks
@@ -64,7 +72,7 @@ def get_time(time_string):
 api = ShoonyaApiPy()
 
 #yaml for parameters
-with open('..\\cred.yml') as f:
+with open('../cred.yml') as f:
     cred = yaml.load(f, Loader=yaml.FullLoader)
     print(cred)
 
@@ -72,7 +80,7 @@ ret = api.login(userid = cred['user'], password = cred['pwd'], twoFA=cred['facto
 
 if ret != None:   
     ret = api.start_websocket(order_update_callback=event_handler_order_update, subscribe_callback=event_handler_quote_update, socket_open_callback=open_callback)
-    
+
     while True:
         if socket_opened == True:
             print('q => quit')
